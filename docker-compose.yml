@@ -1,0 +1,27 @@
+services:
+  redis:
+    build: ./redis
+    volumes:
+      - redis_data:/data
+
+  flask:
+    build: ./app
+    expose:
+      - "5002"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "5002:80"
+    depends_on:
+      - flask
+
+volumes:
+  redis_data:
