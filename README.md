@@ -98,6 +98,7 @@ The two jobs run in parallel on separate runners. A red `lint` job points to a s
 - **Behavioural test for the counter.** The count depends on how many visits have happened before, so the test asserts the *increment* (two requests, difference of exactly one), not an absolute value.
 - **Lint rules in version control.** A root `.flake8` file raises the line-length limit to 100 and excludes the virtual environment, so local runs and CI use identical rules.
 - **Dev tooling kept out of `requirements.txt`.** `flake8` is installed only in the `lint` job, because the application doesn't need it to run.
+- **Python version matrix.** The `test` job runs on Python 3.11, 3.12 and 3.13 in parallel from a single job definition. Each matrix job gets its own Redis service container, so the counter test can't interfere across versions.
 
 ### Running the checks locally
 
@@ -124,6 +125,5 @@ docker rm -f test-redis
 ### Known considerations and next steps
 
 - Runners use `ubuntu-latest`, which GitHub is migrating to Ubuntu 26 on 19 October 2026. Pinning to a fixed image would make runner upgrades a deliberate change.
-- Tests currently run on a single Python version. A matrix build would cover several.
 - Next: build and push the Docker image from the pipeline (the CD half).
 
