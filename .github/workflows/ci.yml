@@ -3,8 +3,8 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:                                      
-      matrix:                                      
+    strategy:
+      matrix:
         python-version: ['3.11', '3.12', '3.13']
     services:
       redis:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}   
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: pip install -r app/requirements.txt
@@ -58,4 +58,14 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}     
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          tags: |
+            zishankhokhar/flask-redis-docker:latest
+            zishankhokhar/flask-redis-docker:${{ github.sha }}
