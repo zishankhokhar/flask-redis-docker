@@ -67,7 +67,6 @@ curl http://localhost:5002/count   # continues, doesn't reset
 
 - Managed/HA Redis (single instance is a state bottleneck)
 - Health checks (`depends_on` only controls start order, not readiness)
-- CD: build and push the Docker images to Docker Hub automatically from the pipeline (CI for lint and tests is already in place, see below)
 
 ---
 
@@ -85,10 +84,11 @@ Every push and pull request runs an automated pipeline in GitHub Actions. It che
 |---|---|---|
 | `lint` | Is the code written cleanly? | `flake8` against the `app/` directory |
 | `test` | Does the application work? | `pytest` against a live Redis service container |
+| `docker` | Can the app ship? | Builds the image and pushes it to Docker Hub, only after `lint` and `test` pass, and only on pushes to `main` |
 
-The two jobs run in parallel on separate runners. A red `lint` job points to a style problem. A red `test` job points to broken behaviour. The failing job's name tells you which kind of problem it is before you open a log.
+`lint` and `test` run in parallel on separate runners, and `docker` starts only once both have passed. A red `lint` job points to a style problem. A red `test` job points to broken behaviour. The failing job's name tells you which kind of problem it is before you open a log.
 
-**Triggers:** `push` and `pull_request`. Running on pull requests means a failing change is visible on the PR before it merges.
+**Triggers:** `push` and `pull_request`. Running on pull requests means a failing change is visible on the PR before it merges. The `docker` job is skipped on pull requests and on pushes to other branches, so only code that has landed on `main` is ever published.
 
 ### Design decisions
 
@@ -99,6 +99,10 @@ The two jobs run in parallel on separate runners. A red `lint` job points to a s
 - **Lint rules in version control.** A root `.flake8` file raises the line-length limit to 100 and excludes the virtual environment, so local runs and CI use identical rules.
 - **Dev tooling kept out of `requirements.txt`.** `flake8` is installed only in the `lint` job, because the application doesn't need it to run.
 - **Python version matrix.** The `test` job runs on Python 3.11, 3.12 and 3.13 in parallel from a single job definition. Each matrix job gets its own Redis service container, so the counter test can't interfere across versions.
+- **Publish only after the checks pass.** The `docker` job uses `needs: [test, lint]`, so a broken change can never produce a published image.
+- **Branch guard on the job.** An `if:` condition limits `docker` to pushes to `main`. I verified this with a throwaway pull request, where the job showed as skipped while `lint` and `test` ran as normal.
+- **Two tags per image.** `latest` is the convenient pointer, and the commit SHA tag ties every image to the exact code that built it, which makes rollbacks and debugging straightforward.
+- **Credentials in repository secrets.** The Docker Hub username and an access token are stored as GitHub secrets, never in the workflow file, and the token is a scoped access token rather than my account password.
 
 ### Running the checks locally
 
@@ -125,5 +129,4 @@ docker rm -f test-redis
 ### Known considerations and next steps
 
 - Runners use `ubuntu-latest`, which GitHub is migrating to Ubuntu 26 on 19 October 2026. Pinning to a fixed image would make runner upgrades a deliberate change.
-- Next: build and push the Docker image from the pipeline (the CD half).
-
+- The pipeline publishes the Flask app image only. The separate Redis Dockerfile in the repo is not built or pushed from CI.
