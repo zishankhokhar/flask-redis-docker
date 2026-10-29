@@ -128,5 +128,5 @@ docker rm -f test-redis
 
 ### Known considerations and next steps
 
-- Runners use `ubuntu-latest`, which GitHub is migrating to Ubuntu 26 on 19 October 2026. Pinning to a fixed image would make runner upgrades a deliberate change.
+- Runners use `ubuntu-latest`, which GitHub is moving from Ubuntu 24.04 to 26.04 gradually between 19 October and 19 November 2026. My runs still reported `ubuntu-24.04` on 25 October. Pinning to a fixed image would make the switch a deliberate change.
 - The pipeline publishes the Flask app image only. The separate Redis Dockerfile in the repo is not built or pushed from CI.
